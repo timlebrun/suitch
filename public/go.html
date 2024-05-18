@@ -3,16 +3,19 @@
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>Document</title>
+
+		<link rel="stylesheet" href="/style.css" />
+
 		<script src="https://unpkg.com/socket.io-client@4.7.5/dist/socket.io.min.js"></script>
 		<script src="https://unpkg.com/alpinejs" defer></script>
 
 		<style>
 			* {
-				font-size: calc( min(8vw, 8vh) );
+				font-size: calc(min(8vw, 8vh));
 				font-family: monospace;
 
 				--color-go: green;
+				--color-stop: orange;
 			}
 
 			html {
@@ -32,15 +35,14 @@
 
 				display: flex;
 				align-items: center;
-
 			}
 
 			body.status-go {
-				background-color: green;
+				background-color: var(--color-go);
 			}
 
 			body.status-stop {
-				background-color: orange;
+				background-color: var(--color-stop);
 			}
 
 			body.flash {
@@ -62,14 +64,14 @@
 			}
 
 			button.btn-go {
-				background-color: green;
+				background-color: var(--color-go);
 				padding: 10vh 0;
 				font-size: 1.6em;
 				height: 50%;
 			}
 
 			button.btn-stop {
-				background-color: orange;
+				background-color: var(--color-stop);
 				height: 20%;
 			}
 
@@ -92,12 +94,17 @@
 				}
 			}
 		</style>
+
+		<title>Suitch - Go Button</title>
 	</head>
 	<body x-data :class="$store.local.getBodyClasses()">
-
 		<div class="container">
-			<button @click="sendStateUpdate({ 'go.status': null })" class="btn-reset">Reset</button>
-			<button @click="sendStateUpdate({ 'go.status': 'STOP' })" class="btn-stop">Stop</button>
+			<button @click="sendStateUpdate({ 'go.status': null })" class="btn-reset">
+				Reset
+			</button>
+			<button @click="sendStateUpdate({ 'go.status': 'STOP' })" class="btn-stop">
+				Stop
+			</button>
 			<button @click="sendStateUpdate({ 'go.status': 'GO' })" class="btn-go">Go</button>
 		</div>
 

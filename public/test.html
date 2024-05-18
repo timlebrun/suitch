@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Document</title>
+		<script src="https://unpkg.com/socket.io-client@4.7.5/dist/socket.io.min.js"></script>
+		<script src="https://unpkg.com/alpinejs" defer></script>
+	</head>
+	<body x-data>
+		<h1>Suitch</h1>
+
+		<div id="state-monitor">
+			<h2>State</h2>
+			<pre x-text="JSON.stringify($store.local.state, null, 2)"></pre>
+		</div>
+
+		<div id="state-update">
+			<h2>Update</h2>
+			<input type="text" name="state-key" id="state-update-key-input" />
+			<input type="text" name="state-value" id="state-update-value-input" />
+			<button @click="sendTestStateUpdate()">Send !</button>
+		</div>
+
+		<script>
+			const currentUrl = new URL(window.location);
+
+			const stateUpdateKeyInput = document.getElementById('state-update-key-input');
+			const stateUpdateValueInput = document.getElementById('state-update-value-input');
+
+			async function sendPostRequest(path, body = null) {
+				const response = await fetch(path, { method: 'post', body });
+				const responseBodyData = await response.json();
+				console.log({ responseBodyData });
+
+				return responseBodyData;
+			}
+
+			function init() {
+				Alpine.store('local', {
+					loading: false,
+					state: {},
+				});
+
+				const alpineLocalStore = Alpine.store('local');
+
+				const socket = new io(`/events`, {
+					transports: ['websocket'],
+					path: '/websocket',
+				});
+
+				async function sendTestStateUpdate() {
+					const key = stateUpdateKeyInput.value;
+					const value = stateUpdateValueInput.value;
+					const update = { [key]: value };
+
+					console.debug('SENDING STATE UPDATE', update);
+					socket.emit('suitch::state.update', update);
+				}
+
+				Object.assign(window, { sendTestStateUpdate });
+
+				socket.on('suitch::state:hello', (stateUpdate) => {
+					console.debug('RECEIVED HELLO', stateUpdate);
+					alpineLocalStore.state = stateUpdate;
+				});
+
+				socket.on('suitch::state:heartbeat', (stateUpdate) => {
+					console.debug('RECEIVED HEARTBEAT', stateUpdate);
+					alpineLocalStore.state = stateUpdate;
+				});
+
+				socket.on('suitch::state:changed', (stateUpdate) => {
+					console.debug('RECEIVED STATE CHANGE', stateUpdate);
+					Object.assign(alpineLocalStore.state, stateUpdate);
+				});
+			}
+
+			document.addEventListener('alpine:init', () => init());
+		</script>
+	</body>
+</html>

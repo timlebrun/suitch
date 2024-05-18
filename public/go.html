@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Document</title>
+		<script src="https://unpkg.com/socket.io-client@4.7.5/dist/socket.io.min.js"></script>
+		<script src="https://unpkg.com/alpinejs" defer></script>
+
+		<style>
+			* {
+				font-size: calc( min(8vw, 8vh) );
+				font-family: monospace;
+
+				--color-go: green;
+			}
+
+			html {
+				margin: 0;
+				padding: 0;
+			}
+
+			body {
+				margin: 0;
+
+				background-color: #222;
+				color: #fff;
+				height: 100vh;
+				width: 100vw;
+				overflow: hidden;
+				text-align: center;
+
+				display: flex;
+				align-items: center;
+
+			}
+
+			body.status-go {
+				background-color: green;
+			}
+
+			body.status-stop {
+				background-color: orange;
+			}
+
+			body.flash {
+				animation: flash-go 0.2s ease-in-out;
+			}
+
+			button {
+				color: #fff;
+				text-align: center;
+				padding: 2vh 2vw;
+				text-transform: uppercase;
+				font-weight: bold;
+				display: block;
+				background: #333;
+				border: 1vw solid #fff;
+				width: 80vw;
+
+				margin: 2vh 0;
+			}
+
+			button.btn-go {
+				background-color: green;
+				padding: 10vh 0;
+				font-size: 1.6em;
+				height: 50%;
+			}
+
+			button.btn-stop {
+				background-color: orange;
+				height: 20%;
+			}
+
+			.container {
+				width: 80vw;
+				height: 80vh;
+				margin: auto;
+				display: flex;
+				flex-direction: column;
+				/* align-items: center; */
+				justify-content: space-around;
+			}
+
+			@keyframes flash-go {
+				0% {
+					background-color: #fff;
+				}
+				100% {
+					background-color: var(--color-go);
+				}
+			}
+		</style>
+	</head>
+	<body x-data :class="$store.local.getBodyClasses()">
+
+		<div class="container">
+			<button @click="sendStateUpdate({ 'go.status': null })" class="btn-reset">Reset</button>
+			<button @click="sendStateUpdate({ 'go.status': 'STOP' })" class="btn-stop">Stop</button>
+			<button @click="sendStateUpdate({ 'go.status': 'GO' })" class="btn-go">Go</button>
+		</div>
+
+		<script>
+			const currentUrl = new URL(window.location);
+
+			async function sendPostRequest(path, body = null) {
+				const response = await fetch(path, { method: 'post', body });
+				const responseBodyData = await response.json();
+				console.log({ responseBodyData });
+
+				return responseBodyData;
+			}
+
+			function init() {
+				Alpine.store('local', {
+					getBodyClasses() {
+						const classes = [];
+						if (this.flash) classes.push('flash');
+
+						if (this.state['go.status'] === 'GO') classes.push('status-go');
+						if (this.state['go.status'] === 'STOP') classes.push('status-stop');
+						return classes.join(' ');
+					},
+					loading: false,
+					state: {},
+					flash: false,
+				});
+
+				const alpineLocalStore = Alpine.store('local');
+
+				const socket = new io(`/events`, {
+					transports: ['websocket'],
+					path: '/websocket',
+				});
+
+				async function sendStateUpdate(update) {
+					console.debug('SENDING STATE UPDATE', update);
+					socket.emit('suitch::state.update', update);
+				}
+
+				Object.assign(window, { sendStateUpdate });
+
+				socket.on('suitch::state:hello', (stateUpdate) => {
+					console.debug('RECEIVED HELLO', stateUpdate);
+					alpineLocalStore.state = stateUpdate;
+				});
+
+				socket.on('suitch::state:heartbeat', (stateUpdate) => {
+					console.debug('RECEIVED HEARTBEAT', stateUpdate);
+					alpineLocalStore.state = stateUpdate;
+				});
+
+				socket.on('suitch::state:changed', (stateUpdate) => {
+					console.debug('RECEIVED STATE CHANGE', stateUpdate);
+
+					Object.assign(alpineLocalStore.state, stateUpdate);
+
+					if (stateUpdate['go.status'] === 'GO') {
+						console.debug('FLASH AAAAA');
+						alpineLocalStore.flash = true;
+						setTimeout(() => (alpineLocalStore.flash = false), 300);
+					}
+				});
+			}
+
+			document.addEventListener('alpine:init', () => init());
+		</script>
+	</body>
+</html>

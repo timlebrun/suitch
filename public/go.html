@@ -49,6 +49,29 @@
 				animation: flash-go 0.2s ease-in-out;
 			}
 
+
+			.container {
+				width: 80vw;
+				height: 80vh;
+				margin: auto;
+				display: flex;
+				flex-direction: column;
+				/* align-items: center; */
+				justify-content: space-around;
+			}
+
+			.loader {
+				position: fixed;
+				top: 0;
+				bottom: 0;
+				left: 0;
+				right: 0;
+				background: rgba(128, 128, 128, .6);
+				display: flex;
+				align-items: center;
+				justify-content: space-around;
+			}
+
 			button {
 				color: #fff;
 				text-align: center;
@@ -75,15 +98,6 @@
 				height: 20%;
 			}
 
-			.container {
-				width: 80vw;
-				height: 80vh;
-				margin: auto;
-				display: flex;
-				flex-direction: column;
-				/* align-items: center; */
-				justify-content: space-around;
-			}
 
 			@keyframes flash-go {
 				0% {
@@ -98,6 +112,13 @@
 		<title>Suitch - Go Button</title>
 	</head>
 	<body x-data :class="$store.local.getBodyClasses()">
+		<template x-if="$store.local.connecting">
+			<div class="loader" >
+				<span>connecting</span>
+			</div>
+		</template>
+
+
 		<div class="container">
 			<button @click="sendStateUpdate({ 'go.status': null })" class="btn-reset">
 				Reset
@@ -129,7 +150,7 @@
 						if (this.state['go.status'] === 'STOP') classes.push('status-stop');
 						return classes.join(' ');
 					},
-					loading: false,
+					connecting: true,
 					state: {},
 					flash: false,
 				});
@@ -147,6 +168,9 @@
 				}
 
 				Object.assign(window, { sendStateUpdate });
+
+				socket.on('connect', () => alpineLocalStore.connecting = socket.disconnected);
+				socket.on('disconnect', () => alpineLocalStore.connecting = socket.disconnected);
 
 				socket.on('suitch::state:hello', (stateUpdate) => {
 					console.debug('RECEIVED HELLO', stateUpdate);
